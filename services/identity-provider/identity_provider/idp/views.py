@@ -123,9 +123,11 @@ def authorize(request: HttpRequest) -> HttpResponse:
         )
 
     if not request.user.is_authenticated:
-        # Bounce through login. Preserve the original query.
+        # Bounce through login. The original query string contains `&`, so we
+        # MUST urlencode it — otherwise the browser parses `/login?next=...&`
+        # as multiple query params and `next` only sees the first segment.
         next_url = request.get_full_path()
-        login_url = f"/login?next={next_url}"
+        login_url = "/login?" + urlencode({"next": next_url})
         return HttpResponseRedirect(login_url)
 
     # Issue authorization code, redirect.

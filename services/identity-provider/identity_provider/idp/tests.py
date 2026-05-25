@@ -230,6 +230,51 @@ class OIDCFlowTests(TestCase):
         self.assertEqual(r.json()["username"], "alice")
         self.assertTrue(User.objects.filter(username="alice").exists())
 
+    def test_authorize_redirects_anonymous_to_login_preserving_full_query(self):
+        """
+        Regression: /authorize must urlencode the `next` parameter when
+        bouncing through /login, otherwise the `&` separators in the OAuth
+        query string get parsed as separate `/login` query params and the
+        client_id / redirect_uri / state are lost on the return trip.
+        """
+        verifier, challenge = _pkce_pair()
+        state = secrets.token_urlsafe(16)
+        qs = urlencode({
+            "response_type": "code", "client_id": "spa", "redirect_uri": self.REDIRECT_URI,
+            "scope": "openid", "state": state,
+            "code_challenge": challenge, "code_challenge_method": "S256",
+        })
+
+        # 1. Anonymous request to /authorize → 302 to /login?next=<encoded>
+        r = self.client.get(f"/api/v1/authorize?{qs}")
+        self.assertEqual(r.status_code, 302)
+        login_redirect = r["Location"]
+        self.assertTrue(login_redirect.startswith("/login?"))
+
+        # 2. Hitting that login URL must surface the *full* original path
+        #    via request.GET["next"].
+        login_page = self.client.get(login_redirect)
+        self.assertEqual(login_page.status_code, 200)
+        # The original query string survived round-tripping.
+        self.assertIn("client_id=spa", login_page.context["next"])
+        self.assertIn(f"state={state}", login_page.context["next"])
+        self.assertIn("code_challenge=", login_page.context["next"])
+
+        # 3. POST /login with that `next` → user is logged in and bounced
+        #    to /api/v1/authorize?<full query>, which now succeeds.
+        next_value = login_page.context["next"]
+        post = self.client.post("/login", {
+            "username": "kirill", "password": "secret123", "next": next_value,
+        })
+        self.assertEqual(post.status_code, 302)
+        # Follow the redirect to /authorize: should issue a code now.
+        bounced = self.client.get(post["Location"])
+        self.assertEqual(bounced.status_code, 302)
+        self.assertTrue(bounced["Location"].startswith(self.REDIRECT_URI))
+        params = parse_qs(urlparse(bounced["Location"]).query)
+        self.assertEqual(params["state"], [state])
+        self.assertIn("code", params)
+
     def test_expired_token_rejected(self):
         import time
         kp = get_keypair()

@@ -100,10 +100,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # для api
+    'corsheaders',
     'rest_framework',
     # регистрация приложений
     "gateway_service.gateway.apps.GatewayConfig",
 ]
+
+CORS_ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get('GATEWAY_CORS_ORIGINS', '').split(',') if o.strip()
+]
+CORS_ALLOW_HEADERS = list({'authorization', 'content-type', 'accept'})
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -115,6 +121,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

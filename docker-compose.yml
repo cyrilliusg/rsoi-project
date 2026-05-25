@@ -1,4 +1,4 @@
-name: ds-lab3
+name: rsoi-project
 
 services:
   postgres:
@@ -43,6 +43,7 @@ services:
       DJANGO_ALLOWED_HOSTS: "*"
       # IdP
       IDP_ISSUER: "http://localhost:8090"
+      IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
       IDP_AUDIENCE: "spa"
     ports:
       - "8050:8000"
@@ -85,6 +86,7 @@ services:
       DJANGO_ALLOWED_HOSTS: "*"
       # IdP
       IDP_ISSUER: "http://localhost:8090"
+      IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
       IDP_AUDIENCE: "spa"
     ports:
       - "8060:8000"
@@ -127,6 +129,7 @@ services:
       DJANGO_ALLOWED_HOSTS: "*"
       # IdP
       IDP_ISSUER: "http://localhost:8090"
+      IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
       IDP_AUDIENCE: "spa"
     ports:
       - "8070:8000"
@@ -164,6 +167,10 @@ services:
       PAYMENT_SERVICE_URL: "http://payment-service:8000/api/v1"
       REDIS_URL: "redis://redis:6379/0"
       ROLE: "web"
+      IDP_ISSUER: "http://localhost:8090"
+      IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
+      IDP_AUDIENCE: "spa"
+      GATEWAY_CORS_ORIGINS: "http://localhost:3000"
     ports:
       - "8080:8000"
     tmpfs: [ "/tmp", "/run" ]
@@ -256,10 +263,34 @@ services:
       PAYMENT_SERVICE_URL: "http://payment-service:8000/api/v1"
       REDIS_URL: "redis://redis:6379/0"
       ROLE: "worker"
+      IDP_ISSUER: "http://localhost:8090"
+      IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
+      IDP_AUDIENCE: "spa"
     depends_on:
       - redis
       - gateway-service
     networks: [ internal ]
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_IDP_ISSUER: "http://localhost:8090"
+        NEXT_PUBLIC_GATEWAY_URL: "http://localhost:8080"
+        NEXT_PUBLIC_OAUTH_CLIENT_ID: "spa"
+        NEXT_PUBLIC_OAUTH_REDIRECT_URI: "http://localhost:3000/auth/callback"
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      internal:
+        aliases:
+          - frontend
+    depends_on:
+      - gateway-service
+      - identity-provider
 
 volumes:
   pgdata:

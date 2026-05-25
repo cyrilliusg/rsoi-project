@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+docs/
+
+# Identity Provider RSA keys (generated locally / loaded from k8s secret in prod)
+services/identity-provider/keys/
+
+
+node_modules/
+\.next/
+.env.local
+.env.*.local
+*.tsbuildinfo
