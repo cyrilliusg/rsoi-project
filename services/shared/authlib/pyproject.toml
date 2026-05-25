@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "authlib"
+version = "0.1.0"
+description = "JWT validation middleware for Django services in rsoi-project (validates RS256 JWTs against IdP JWKS)."
+requires-python = ">=3.12"
+dependencies = [
+  "PyJWT[crypto]>=2.10.1",
+  "requests>=2.32.5",
+  "djangorestframework>=3.16.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["authlib*"]

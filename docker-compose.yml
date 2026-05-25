@@ -178,6 +178,50 @@ services:
       start_period: 10s
     networks: [ internal ]
 
+  identity-provider:
+    container_name: identity-provider
+    build:
+      context: ./services/identity-provider
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_IDENTITY: "identity"
+      DB_USER: "program"
+      DB_PASSWORD: "test"
+      DB_DOCKER_HOST: "postgres"
+      DB_LOCAL_HOST: "localhost"
+      DB_PORT: "5432"
+      DJANGO_SECRET_KEY: "test"
+      MODE: "docker"
+      DJANGO_ALLOWED_HOSTS: "*"
+      IDP_ISSUER: "http://localhost:8090"
+      IDP_ACCESS_TOKEN_TTL: "3600"
+      JWT_PRIVATE_KEY_PATH: "/app/keys/private.pem"
+      JWT_PUBLIC_KEY_PATH: "/app/keys/public.pem"
+      IDP_ADMIN_USERNAME: "admin"
+      IDP_ADMIN_PASSWORD: "admin"
+      IDP_ADMIN_EMAIL: "admin@example.com"
+      IDP_CORS_ORIGINS: "http://localhost:3000"
+    ports:
+      - "8090:8000"
+    volumes:
+      - ./services/identity-provider/keys:/app/keys:ro
+    tmpfs: [ "/tmp", "/run" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "python - <<'EOF'\nimport urllib.request, sys\ntry:\n  urllib.request.urlopen('http://identity-provider:8000/manage/health', timeout=2)\n  sys.exit(0)\nexcept Exception:\n  sys.exit(1)\nEOF" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      internal:
+        aliases:
+          - identity-provider
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+
   gateway_worker:
     container_name: gateway_worker-service
     build:

@@ -1,0 +1,36 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Identity Provider — Вход</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 360px; margin: 4rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.25rem; margin-bottom: 1rem; }
+    form { display: flex; flex-direction: column; gap: 0.75rem; }
+    label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
+    input { padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+    button { padding: 0.6rem; border: 0; border-radius: 4px; background: #2563eb; color: white; font-size: 1rem; cursor: pointer; }
+    .error { color: #b91c1c; font-size: 0.9rem; }
+    .meta { color: #6b7280; font-size: 0.8rem; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Вход в Car Rental</h1>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>
+      Логин
+      <input type="text" name="username" required autofocus>
+    </label>
+    <label>
+      Пароль
+      <input type="password" name="password" required>
+    </label>
+    <button type="submit">Войти</button>
+  </form>
+  <div class="meta">Identity Provider · rsoi-project</div>
+</body>
+</html>
