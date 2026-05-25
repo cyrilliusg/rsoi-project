@@ -21,6 +21,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
  && python -m pip install --no-cache-dir /wheels/* \
  && rm -rf /wheels
 
+# Shared authlib (JWT validation) — supplied via additional_contexts in compose
+COPY --from=shared /authlib /shared/authlib
+RUN pip install --no-cache-dir /shared/authlib
+
 # Копируем проект
 COPY . /app
 

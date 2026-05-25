@@ -9,11 +9,11 @@ from rest_framework.response import Response
 
 from .models import Rental
 from .serializers import CreateRentalRequestSerializer, RentalShortSerializer
-from .permissions import HasUserHeader
 
 
 def _username(request) -> str:
-    return request.headers.get("X-User-Name")
+    """Username from validated JWT (was X-User-Name in phase 1)."""
+    return request.user.username
 
 
 def _to_aware_midnight(d):
@@ -24,7 +24,7 @@ def _to_aware_midnight(d):
 class RentalViewSet(viewsets.ViewSet):
     """
     /api/v1/rental:
-      GET  -> список аренд пользователя (по X-User-Name)
+      GET  -> список аренд пользователя (по JWT preferred_username)
       POST -> создать аренду (IN_PROGRESS)
 
     /api/v1/rental/{rentalUid}:
@@ -34,7 +34,8 @@ class RentalViewSet(viewsets.ViewSet):
     /api/v1/rental/{rentalUid}/finish:
       POST -> завершить аренду (FINISHED)
     """
-    permission_classes = [HasUserHeader]
+    # Auth is supplied by the global authlib.JWTAuthentication +
+    # authlib.IsAuthenticated configured in settings.REST_FRAMEWORK.
 
     def list(self, request):
         user = _username(request)

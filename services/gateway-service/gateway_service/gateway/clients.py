@@ -25,7 +25,7 @@ class ServiceClient:
 
         kwargs.setdefault("timeout", self.timeout)
 
-        logger.info("HTTP %s %s params=%s json=%s headers=%s", method, url, params, json, headers)
+        logger.info("HTTP %s %s params=%s json=%s", method, url, params, json)
 
         try:
             response = self.session.request(method, url, params=params, json=json, headers=headers, **kwargs)
@@ -64,59 +64,68 @@ payment_cb = CircuitBreaker("payment_service", failure_threshold=3, recovery_tim
 rental_cb = CircuitBreaker("rental_service", failure_threshold=3, recovery_timeout=10)
 
 
-def _user_headers(username: str) -> dict[str, str]:
-    return {"X-User-Name": username}
+def _bearer(token: Optional[str]) -> dict[str, str]:
+    """
+    Build Authorization headers from the inbound bearer token.
+
+    Phase 2: we propagate the caller's JWT to every upstream request so
+    every service can independently validate it via the same JWKs.
+    """
+    if not token:
+        return {}
+    return {"Authorization": token}
 
 
-# ==== CAR SERVICE (READ, with CB) ====
-def get_cars(show_all: bool = False, page: int = 0, size: int = 10):
+# ==== CAR SERVICE ====
+def get_cars(show_all: bool = False, page: int = 0, size: int = 10, *, token: Optional[str] = None):
     params = {"showAll": show_all, "page": page, "size": size}
+    headers = _bearer(token)
 
     def _call():
-        r = car_client.get("/cars", params=params)
+        r = car_client.get("/cars", params=params, headers=headers)
         return r.json()
 
-    # Car Service для /cars – критичен, поэтому фолбэка нет → ошибка поднимется вверх
     return car_cb.call(_call)
 
 
-def get_car(car_uid: str, allow_fallback: bool = False):
+def get_car(car_uid: str, *, token: Optional[str] = None, allow_fallback: bool = False):
+    headers = _bearer(token)
+
     def _call():
-        r = car_client.get(f"/cars/{car_uid}")
+        r = car_client.get(f"/cars/{car_uid}", headers=headers)
         return r.json()
 
     def _fallback():
         if allow_fallback:
-            # Фолбэк: только uid
             return {"carUid": car_uid}
-        # Критичный сценарий (например, POST /rental)
         raise ServiceUnavailable("Car service unavailable")
 
     return car_cb.call(_call, fallback=_fallback if allow_fallback else None)
 
 
-def reserve_car(car_uid: str) -> None:
-    # запись состояния – без circuit breaker
-    car_client.post(f"/cars/{car_uid}/reserve/")
+def reserve_car(car_uid: str, *, token: Optional[str] = None) -> None:
+    car_client.post(f"/cars/{car_uid}/reserve/", headers=_bearer(token))
 
 
-def release_car(car_uid: str) -> None:
-    car_client.post(f"/cars/{car_uid}/release/")
+def release_car(car_uid: str, *, token: Optional[str] = None) -> None:
+    car_client.post(f"/cars/{car_uid}/release/", headers=_bearer(token))
 
 
-# ==== PAYMENT SERVICE (READ, with CB) ====
-def create_payment(price: float):
-    r = payment_client.post("/payment/", json={"price": price})
+# ==== PAYMENT SERVICE ====
+def create_payment(price: float, *, token: Optional[str] = None):
+    r = payment_client.post("/payment/", json={"price": price}, headers=_bearer(token))
     return r.json()
 
 
-def cancel_payment(paymentUid: str) -> None:
-    payment_client.delete(f"/payment/{paymentUid}/")
+def cancel_payment(paymentUid: str, *, token: Optional[str] = None) -> None:
+    payment_client.delete(f"/payment/{paymentUid}/", headers=_bearer(token))
 
 
-def get_payment(payment_uid: str, allow_fallback: bool = False):
+def get_payment(payment_uid: str, *, token: Optional[str] = None, allow_fallback: bool = False):
+    headers = _bearer(token)
+
     def _call():
-        r = payment_client.get(f"/payment/{payment_uid}")
+        r = payment_client.get(f"/payment/{payment_uid}", headers=headers)
         return r.json()
 
     def _fallback():
@@ -127,31 +136,30 @@ def get_payment(payment_uid: str, allow_fallback: bool = False):
     return payment_cb.call(_call, fallback=_fallback if allow_fallback else None)
 
 
-# ==== RENTAL SERVICE (READ, with CB) ====
-def create_rental(username: str, car_uid: str, payment_uid: str, date_from: str, date_to: str):
+# ==== RENTAL SERVICE ====
+def create_rental(car_uid: str, payment_uid: str, date_from: str, date_to: str, *, token: Optional[str] = None):
     data = {
         "carUid": car_uid,
         "paymentUid": payment_uid,
         "dateFrom": date_from,
-        "dateTo": date_to}
-    headers = _user_headers(username)
-    r = rental_client.post("/rental/", json=data, headers=headers)
+        "dateTo": date_to,
+    }
+    r = rental_client.post("/rental/", json=data, headers=_bearer(token))
     return r.json()
 
 
-def get_rentals(username: str):
-    headers = _user_headers(username)
+def get_rentals(*, token: Optional[str] = None):
+    headers = _bearer(token)
 
     def _call():
         r = rental_client.get("/rental", headers=headers)
         return r.json()
 
-    # Rental Service для списка аренды – критичен → фолбэка нет
     return rental_cb.call(_call)
 
 
-def get_rental(username: str, rental_uid: str):
-    headers = _user_headers(username)
+def get_rental(rental_uid: str, *, token: Optional[str] = None):
+    headers = _bearer(token)
 
     def _call():
         r = rental_client.get(f"/rental/{rental_uid}", headers=headers)
@@ -160,11 +168,9 @@ def get_rental(username: str, rental_uid: str):
     return rental_cb.call(_call)
 
 
-def finish_rental(username: str, rental_uid: str) -> None:
-    headers = _user_headers(username)
-    rental_client.post(f"/rental/{rental_uid}/finish/", headers=headers)
+def finish_rental(rental_uid: str, *, token: Optional[str] = None) -> None:
+    rental_client.post(f"/rental/{rental_uid}/finish/", headers=_bearer(token))
 
 
-def cancel_rental(username: str, rentalUid: str) -> None:
-    headers = _user_headers(username)
-    rental_client.delete(f"/rental/{rentalUid}/", headers=headers)
+def cancel_rental(rentalUid: str, *, token: Optional[str] = None) -> None:
+    rental_client.delete(f"/rental/{rentalUid}/", headers=_bearer(token))

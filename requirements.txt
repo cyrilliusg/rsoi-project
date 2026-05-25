@@ -4,3 +4,15 @@ python-dotenv==1.1.1
 psycopg[binary]==3.2.9
 djangorestframework==3.16.1
 gunicorn==23.0.0
+
+# Phase 2: JWT validation (used by car/rental/payment/gateway).
+# IdP also imports cryptography directly for key handling.
+PyJWT[crypto]==2.10.1
+cryptography==44.0.0
+requests==2.32.5
+
+# Phase 1: IdP-only (other services don't need it but harmless in CI).
+django-cors-headers==4.6.0
+
+# Shared authlib package (editable install so CI sees source changes).
+-e services/shared/authlib

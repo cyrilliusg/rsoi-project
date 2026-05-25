@@ -26,6 +26,8 @@ services:
     build:
       context: ./services/car-service
       dockerfile: Dockerfile
+      additional_contexts:
+        shared: ./services/shared
     restart: unless-stopped
     environment:
       # Пользователи/БД приложения:
@@ -39,6 +41,9 @@ services:
       DJANGO_SECRET_KEY: "test"
       MODE: "docker"
       DJANGO_ALLOWED_HOSTS: "*"
+      # IdP
+      IDP_ISSUER: "http://localhost:8090"
+      IDP_AUDIENCE: "spa"
     ports:
       - "8050:8000"
     read_only: true
@@ -63,6 +68,8 @@ services:
     build:
       context: ./services/rental-service
       dockerfile: Dockerfile
+      additional_contexts:
+        shared: ./services/shared
     restart: unless-stopped
     environment:
       # Пользователи/БД приложения:
@@ -76,6 +83,9 @@ services:
       DJANGO_SECRET_KEY: "test"
       MODE: "docker"
       DJANGO_ALLOWED_HOSTS: "*"
+      # IdP
+      IDP_ISSUER: "http://localhost:8090"
+      IDP_AUDIENCE: "spa"
     ports:
       - "8060:8000"
     read_only: true
@@ -100,6 +110,8 @@ services:
     build:
       context: ./services/payment-service
       dockerfile: Dockerfile
+      additional_contexts:
+        shared: ./services/shared
     restart: unless-stopped
     environment:
       # Пользователи/БД приложения:
@@ -113,6 +125,9 @@ services:
       DJANGO_SECRET_KEY: "test"
       MODE: "docker"
       DJANGO_ALLOWED_HOSTS: "*"
+      # IdP
+      IDP_ISSUER: "http://localhost:8090"
+      IDP_AUDIENCE: "spa"
     ports:
       - "8070:8000"
     read_only: true
@@ -137,6 +152,8 @@ services:
     build:
       context: ./services/gateway-service
       dockerfile: Dockerfile
+      additional_contexts:
+        shared: ./services/shared
     restart: unless-stopped
     environment:
       DJANGO_SECRET_KEY: "test"
@@ -227,6 +244,8 @@ services:
     build:
       context: ./services/gateway-service
       dockerfile: Dockerfile
+      additional_contexts:
+        shared: ./services/shared
     restart: unless-stopped
     environment:
       DJANGO_SECRET_KEY: "test"

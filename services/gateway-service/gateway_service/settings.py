@@ -29,6 +29,12 @@ PAYMENT_SERVICE_URL = os.getenv("PAYMENT_SERVICE_URL", "http://payment-service:8
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 
+# JWT validation against IdP JWKs.
+IDP_ISSUER = os.environ.get('IDP_ISSUER', 'http://identity-provider:8000')
+IDP_JWKS_URI = os.environ.get('IDP_JWKS_URI', f"{IDP_ISSUER.rstrip('/')}/api/v1/jwks")
+IDP_AUDIENCE = os.environ.get('IDP_AUDIENCE', 'spa')
+IDP_JWKS_TTL = int(os.environ.get('IDP_JWKS_TTL', '600'))
+
 # Если запускаем локально, то соответствующий хост
 if MODE == 'local':
     DEBUG = True
@@ -100,10 +106,11 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'authlib.middleware.JWTAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny'
+        'authlib.permissions.IsAuthenticated',
     ],
 }
 

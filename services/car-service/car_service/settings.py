@@ -80,11 +80,18 @@ INSTALLED_APPS = [
     "car_service.cars.apps.CarsConfig",
 ]
 
+# JWT validation against IdP JWKs (see services/shared/authlib + docs/identity-provider.md).
+IDP_ISSUER = os.environ.get('IDP_ISSUER', 'http://identity-provider:8000')
+IDP_JWKS_URI = os.environ.get('IDP_JWKS_URI', f"{IDP_ISSUER.rstrip('/')}/api/v1/jwks")
+IDP_AUDIENCE = os.environ.get('IDP_AUDIENCE', 'spa')
+IDP_JWKS_TTL = int(os.environ.get('IDP_JWKS_TTL', '600'))
+
 REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'authlib.middleware.JWTAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny'
+        'authlib.permissions.IsAuthenticated',
     ],
     "DEFAULT_PAGINATION_CLASS": "car_service.cars.pagination.ApiPagination",
     "PAGE_SIZE": 10,
