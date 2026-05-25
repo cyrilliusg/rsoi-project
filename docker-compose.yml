@@ -1,0 +1,205 @@
+name: ds-lab3
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB} # БД по умолчанию для 1 запуска
+      POSTGRES_USER: ${POSTGRES_USER} # Пользователь по умолчанию для 1 запуска
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Пароль по умолчанию для 1 запуска
+    volumes:
+      - pgdata:/var/lib/postgresql/data       # монтирование тома с данными на хосте
+      - ./postgres/:/docker-entrypoint-initdb.d:ro # Скрипты для 1 запуска. Если pgdata не пустой то не запустится
+    shm_size: "256m"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks: [ internal ]
+
+  car-service:
+    container_name: car-service
+    build:
+      context: ./services/car-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Пользователи/БД приложения:
+      DB_CARS: "cars"
+      DB_USER: "program"
+      DB_PASSWORD: "test"
+      DB_DOCKER_HOST: "postgres"
+      DB_LOCAL_HOST: "localhost"
+      DB_PORT: "5432"
+      # для сервисов
+      DJANGO_SECRET_KEY: "test"
+      MODE: "docker"
+      DJANGO_ALLOWED_HOSTS: "*"
+    ports:
+      - "8050:8000"
+    read_only: true
+    tmpfs: [ "/tmp", "/run" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "python - <<'EOF'\nimport urllib.request, sys\ntry:\n  urllib.request.urlopen('http://car-service:8000/manage/health', timeout=2)\n  sys.exit(0)\nexcept Exception:\n  sys.exit(1)\nEOF" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      internal:
+        aliases:
+          - car-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+
+  rental-service:
+    container_name: rental-service
+    build:
+      context: ./services/rental-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Пользователи/БД приложения:
+      DB_RENTALS: "rentals"
+      DB_USER: "program"
+      DB_PASSWORD: "test"
+      DB_DOCKER_HOST: "postgres"
+      DB_LOCAL_HOST: "localhost"
+      DB_PORT: "5432"
+      # для сервисов
+      DJANGO_SECRET_KEY: "test"
+      MODE: "docker"
+      DJANGO_ALLOWED_HOSTS: "*"
+    ports:
+      - "8060:8000"
+    read_only: true
+    tmpfs: [ "/tmp", "/run" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "python - <<'EOF'\nimport urllib.request, sys\ntry:\n  urllib.request.urlopen('http://rental-service:8000/manage/health', timeout=2)\n  sys.exit(0)\nexcept Exception:\n  sys.exit(1)\nEOF" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      internal:
+        aliases:
+          - rental-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+
+  payment-service:
+    container_name: payment-service
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Пользователи/БД приложения:
+      DB_PAYMENTS: "payments"
+      DB_USER: "program"
+      DB_PASSWORD: "test"
+      DB_DOCKER_HOST: "postgres"
+      DB_LOCAL_HOST: "localhost"
+      DB_PORT: "5432"
+      # для сервисов
+      DJANGO_SECRET_KEY: "test"
+      MODE: "docker"
+      DJANGO_ALLOWED_HOSTS: "*"
+    ports:
+      - "8070:8000"
+    read_only: true
+    tmpfs: [ "/tmp", "/run" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "python - <<'EOF'\nimport urllib.request, sys\ntry:\n  urllib.request.urlopen('http://payment-service:8000/manage/health', timeout=2)\n  sys.exit(0)\nexcept Exception:\n  sys.exit(1)\nEOF" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      internal:
+        aliases:
+          - payment-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+
+  gateway-service:
+    container_name: gateway-service
+    build:
+      context: ./services/gateway-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: "test"
+      MODE: "docker"
+      DJANGO_ALLOWED_HOSTS: "*"
+      CAR_SERVICE_URL: "http://car-service:8000/api/v1"
+      RENTAL_SERVICE_URL: "http://rental-service:8000/api/v1"
+      PAYMENT_SERVICE_URL: "http://payment-service:8000/api/v1"
+      REDIS_URL: "redis://redis:6379/0"
+      ROLE: "web"
+    ports:
+      - "8080:8000"
+    tmpfs: [ "/tmp", "/run" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "python - <<'EOF'\nimport urllib.request, sys\ntry:\n  urllib.request.urlopen('http://gateway-service:8000/manage/health', timeout=2)\n  sys.exit(0)\nexcept Exception:\n  sys.exit(1)\nEOF" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      internal:
+        aliases:
+          - gateway-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+
+  redis:
+    image: redis:8.2.3-alpine
+    container_name: redis
+    restart: unless-stopped
+    command: [ "redis-server","--appendonly","yes","--appendfsync","everysec" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks: [ internal ]
+
+  gateway_worker:
+    container_name: gateway_worker-service
+    build:
+      context: ./services/gateway-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: "test"
+      MODE: "docker"
+      DJANGO_ALLOWED_HOSTS: "*"
+      CAR_SERVICE_URL: "http://car-service:8000/api/v1"
+      RENTAL_SERVICE_URL: "http://rental-service:8000/api/v1"
+      PAYMENT_SERVICE_URL: "http://payment-service:8000/api/v1"
+      REDIS_URL: "redis://redis:6379/0"
+      ROLE: "worker"
+    depends_on:
+      - redis
+      - gateway-service
+    networks: [ internal ]
+
+volumes:
+  pgdata:
+
+networks:
+  internal:
