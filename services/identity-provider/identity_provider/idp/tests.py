@@ -230,6 +230,60 @@ class OIDCFlowTests(TestCase):
         self.assertEqual(r.json()["username"], "alice")
         self.assertTrue(User.objects.filter(username="alice").exists())
 
+    def test_discovery_lists_end_session_endpoint(self):
+        r = self.client.get("/.well-known/openid-configuration")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(
+            r.json()["end_session_endpoint"],
+            "http://testserver/api/v1/logout",
+        )
+
+    def test_logout_clears_session_and_redirects_to_allowed_uri(self):
+        # 1. Log in to set the IdP session cookie.
+        self.client.post("/login", {"username": "kirill", "password": "secret123", "next": "/"})
+        # Confirm cookie is set: the next authorize call should NOT bounce
+        # through /login any more.
+        verifier, challenge = _pkce_pair()
+        qs_pre = urlencode({
+            "response_type": "code", "client_id": "spa", "redirect_uri": self.REDIRECT_URI,
+            "scope": "openid", "state": "s",
+            "code_challenge": challenge, "code_challenge_method": "S256",
+        })
+        pre = self.client.get(f"/api/v1/authorize?{qs_pre}")
+        self.assertEqual(pre.status_code, 302)
+        self.assertTrue(pre["Location"].startswith(self.REDIRECT_URI), pre["Location"])
+
+        # 2. Hit /logout with a registered post_logout_redirect_uri.
+        target = "http://localhost:3000/"
+        r = self.client.get(f"/api/v1/logout?{urlencode({'post_logout_redirect_uri': target, 'state': 'xyz'})}")
+        self.assertEqual(r.status_code, 302)
+        loc = r["Location"]
+        self.assertTrue(loc.startswith(target))
+        self.assertIn("state=xyz", loc)
+
+        # 3. After logout the next /authorize must bounce through /login again.
+        verifier2, challenge2 = _pkce_pair()
+        qs_post = urlencode({
+            "response_type": "code", "client_id": "spa", "redirect_uri": self.REDIRECT_URI,
+            "scope": "openid", "state": "s2",
+            "code_challenge": challenge2, "code_challenge_method": "S256",
+        })
+        post = self.client.get(f"/api/v1/authorize?{qs_post}")
+        self.assertEqual(post.status_code, 302)
+        self.assertTrue(post["Location"].startswith("/login?"), post["Location"])
+
+    def test_logout_rejects_unregistered_post_logout_uri(self):
+        r = self.client.get(
+            f"/api/v1/logout?{urlencode({'post_logout_redirect_uri': 'http://evil.example/x'})}"
+        )
+        self.assertEqual(r.status_code, 400)
+
+    def test_logout_without_redirect_returns_204_like_json(self):
+        self.client.post("/login", {"username": "kirill", "password": "secret123", "next": "/"})
+        r = self.client.get("/api/v1/logout")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), {"status": "logged_out"})
+
     def test_authorize_redirects_anonymous_to_login_preserving_full_query(self):
         """
         Regression: /authorize must urlencode the `next` parameter when

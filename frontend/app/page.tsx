@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cars, type CarsPage } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
@@ -51,11 +50,8 @@ export default function HomePage() {
       <>
         <h1>Car Rental</h1>
         <p className="muted">
-          Войдите, чтобы посмотреть каталог автомобилей и забронировать поездку.
+          Войдите, чтобы посмотреть каталог автомобилей и забронировать поездку
         </p>
-        <Link href="/login">
-          <button>Войти</button>
-        </Link>
       </>
     );
   }

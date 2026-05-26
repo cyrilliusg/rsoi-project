@@ -15,10 +15,10 @@ Public contract: docs/identity-provider.md.
 from __future__ import annotations
 
 import logging
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login as session_login
+from django.contrib.auth import authenticate, login as session_login, logout as session_logout
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.utils.decorators import method_decorator
@@ -46,6 +46,7 @@ def discovery(request: HttpRequest) -> JsonResponse:
         "authorization_endpoint": _abs("/api/v1/authorize"),
         "token_endpoint": _abs("/api/v1/token"),
         "userinfo_endpoint": _abs("/api/v1/userinfo"),
+        "end_session_endpoint": _abs("/api/v1/logout"),
         "jwks_uri": _abs("/api/v1/jwks"),
         "response_types_supported": ["code"],
         "subject_types_supported": ["public"],
@@ -162,6 +163,62 @@ def login_view(request: HttpRequest) -> HttpResponse:
             return HttpResponseRedirect(next_url)
 
     return render(request, "idp/login.html", {"next": next_url, "error": error})
+
+
+def _post_logout_uri_allowed(uri: str) -> bool:
+    """A URI is allowed if its scheme+host+port matches one of the
+    redirect_uris of *any* registered client. Lightweight check that
+    avoids us needing a separate `post_logout_redirect_uris` column."""
+    try:
+        candidate = urlparse(uri)
+    except Exception:
+        return False
+    if not candidate.scheme or not candidate.netloc:
+        return False
+    candidate_origin = f"{candidate.scheme}://{candidate.netloc}"
+    for client in Client.objects.all():
+        for registered in (client.redirect_uris or []):
+            try:
+                p = urlparse(registered)
+            except Exception:
+                continue
+            if not p.scheme or not p.netloc:
+                continue
+            if f"{p.scheme}://{p.netloc}" == candidate_origin:
+                return True
+    return False
+
+
+@csrf_exempt
+def logout_view(request: HttpRequest) -> HttpResponse:
+    """
+    GET /api/v1/logout — RP-Initiated Logout.
+
+    Always tears down the IdP session cookie (idempotent — works even if
+    no session). When `post_logout_redirect_uri` is supplied AND its
+    origin matches a registered client redirect_uri, we 302 the browser
+    back to that URI (optionally preserving `state`).
+
+    Anonymous calls return 204 with the session cookie cleared.
+    """
+    post_logout = request.GET.get("post_logout_redirect_uri", "").strip()
+    state = request.GET.get("state", "")
+
+    session_logout(request)
+
+    if post_logout:
+        if not _post_logout_uri_allowed(post_logout):
+            return JsonResponse(
+                {"error": "invalid_request", "error_description": "post_logout_redirect_uri not allowed"},
+                status=400,
+            )
+        target = post_logout
+        if state:
+            sep = "&" if "?" in target else "?"
+            target = f"{target}{sep}{urlencode({'state': state})}"
+        return HttpResponseRedirect(target)
+
+    return JsonResponse({"status": "logged_out"})
 
 
 @csrf_exempt

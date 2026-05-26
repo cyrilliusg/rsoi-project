@@ -2,14 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { getCurrentUser, logout } from "@/lib/auth";
 import type { JwtClaims } from "@/lib/jwt";
 import styles from "./Header.module.css";
 
 export default function Header() {
   const [user, setUser] = useState<JwtClaims | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     setUser(getCurrentUser());
@@ -23,10 +21,10 @@ export default function Header() {
   }, []);
 
   const handleLogout = () => {
-    logout();
+    // logout() clears local storage AND redirects through IdP to kill
+    // its session cookie; the IdP then bounces back to "/".
     setUser(null);
-    router.push("/");
-    router.refresh();
+    logout("/");
   };
 
   return (
