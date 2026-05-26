@@ -1,17 +1,28 @@
 from datetime import date
 
+import requests
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
 from . import clients
 from .circuit_breaker import ServiceUnavailable
+from .kafka_producer import emit_event
 from .task_queue import enqueue_task
 
 
 def _bearer(request) -> str:
     """Inbound Authorization header (we propagate it to every upstream)."""
     return request.headers.get("Authorization", "")
+
+
+def _principal(request):
+    """Return (user_id, username) from the LightUser put on request by authlib."""
+    user = getattr(request, "user", None)
+    sub = getattr(user, "sub", "") or ""
+    username = getattr(user, "username", "") or ""
+    return sub, username
 
 
 class CarsView(APIView):
@@ -86,15 +97,30 @@ class RentalListView(APIView):
 
     def post(self, request):
         token = _bearer(request)
+        user_id, username = _principal(request)
 
         car_uid = request.data["carUid"]
         date_from = request.data["dateFrom"]
         date_to = request.data["dateTo"]
 
+        def _emit_failed(stage: str, reason: str):
+            emit_event(
+                "rental.failed",
+                user_id=user_id, username=username, correlation_id=car_uid,
+                data={
+                    "carUid": car_uid,
+                    "dateFrom": date_from,
+                    "dateTo": date_to,
+                    "stage": stage,
+                    "reason": reason,
+                },
+            )
+
         # 1. Проверяем авто (критично, без фолбэка)
         try:
             car = clients.get_car(car_uid, token=token)
         except Exception:
+            _emit_failed("get_car", "Car service unavailable or car not found")
             return Response(
                 {"message": "Car Service is unavailable or car not found"},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -110,6 +136,7 @@ class RentalListView(APIView):
         try:
             clients.reserve_car(car_uid, token=token)
         except Exception:
+            _emit_failed("reserve_car", "Reserve failed")
             return Response(
                 {"message": "Failed to reserve car"},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -124,6 +151,7 @@ class RentalListView(APIView):
                 clients.release_car(car_uid, token=token)
             except Exception:
                 pass
+            _emit_failed("create_payment", "Payment service unavailable")
             return Response(
                 {"message": "Payment Service unavailable"},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -142,10 +170,26 @@ class RentalListView(APIView):
                 clients.cancel_payment(payment_uid, token=token)
             except Exception:
                 pass
+            _emit_failed("create_rental", "Rental service unavailable")
             return Response(
                 {"message": "Failed to create rental"},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
+
+        emit_event(
+            "rental.created",
+            user_id=user_id, username=username, correlation_id=rental_uid,
+            data={
+                "rentalUid": rental_uid,
+                "carUid": car_uid,
+                "paymentUid": payment_uid,
+                "dateFrom": date_from,
+                "dateTo": date_to,
+                "totalDays": total_days,
+                "totalPrice": total_price,
+                "status": rental["status"],
+            },
+        )
 
         return Response({
             "rentalUid": rental_uid,
@@ -206,6 +250,7 @@ class RentalDetailView(APIView):
     def delete(self, request, rentalUid):
         """Отмена аренды: release car + cancel rental + cancel payment (часть — через очередь)"""
         token = _bearer(request)
+        user_id, username = _principal(request)
 
         # 1. Читаем аренду (критично)
         try:
@@ -225,10 +270,14 @@ class RentalDetailView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
+        rental_canceled = True
+        payment_canceled = True
+
         # 3. Cancel rental — если не получилось, ставим в очередь
         try:
             clients.cancel_rental(str(rentalUid), token=token)
         except Exception:
+            rental_canceled = False
             enqueue_task("cancel_rental", {
                 "rentalUid": str(rentalUid),
                 "token": token,
@@ -238,10 +287,28 @@ class RentalDetailView(APIView):
         try:
             clients.cancel_payment(r["paymentUid"], token=token)
         except Exception:
+            payment_canceled = False
             enqueue_task("cancel_payment", {
                 "paymentUid": r["paymentUid"],
                 "token": token,
             })
+
+        emit_event(
+            "rental.canceled",
+            user_id=user_id, username=username, correlation_id=str(rentalUid),
+            data={
+                "rentalUid": str(rentalUid),
+                "carUid": r["carUid"],
+                "paymentUid": r["paymentUid"],
+                "previousStatus": r.get("status"),
+                "newStatus": "CANCELED",
+                "compensations": {
+                    "rentalCanceled": rental_canceled,
+                    "paymentCanceled": payment_canceled,
+                    "carReleased": True,
+                },
+            },
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -251,6 +318,7 @@ class RentalFinishView(APIView):
 
     def post(self, request, rentalUid):
         token = _bearer(request)
+        user_id, username = _principal(request)
         try:
             r = clients.get_rental(str(rentalUid), token=token)
         except Exception:
@@ -268,4 +336,50 @@ class RentalFinishView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
+        emit_event(
+            "rental.finished",
+            user_id=user_id, username=username, correlation_id=str(rentalUid),
+            data={
+                "rentalUid": str(rentalUid),
+                "carUid": r["carUid"],
+                "previousStatus": r.get("status"),
+                "newStatus": "FINISHED",
+            },
+        )
+
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StatisticsProxyView(APIView):
+    """
+    Thin reverse proxy for statistics-service.
+
+    Gateway is the only ingress for clients; admin role is re-checked
+    on statistics-service via JWT, but we forward the inbound token
+    verbatim so we don't duplicate the role check here.
+    """
+
+    def get(self, request, subpath: str):
+        base = settings.STATISTICS_SERVICE_URL.rstrip("/")
+        url = f"{base}/statistics/{subpath}"
+        headers = {}
+        auth = request.headers.get("Authorization")
+        if auth:
+            headers["Authorization"] = auth
+        try:
+            upstream = requests.get(
+                url,
+                params=request.query_params,
+                headers=headers,
+                timeout=10,
+            )
+        except requests.RequestException:
+            return Response(
+                {"message": "Statistics Service is unavailable"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        try:
+            data = upstream.json()
+        except ValueError:
+            data = {"raw": upstream.text}
+        return Response(data, status=upstream.status_code)

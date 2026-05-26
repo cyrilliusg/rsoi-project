@@ -1,28 +1,20 @@
-"""
-URL configuration for gateway_service project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+"""URL configuration for gateway_service project."""
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import path
+from django.urls import path, re_path
 
-from .gateway.views import CarsView, RentalListView, RentalDetailView, RentalFinishView
+from .gateway.views import (
+    CarsView,
+    RentalDetailView,
+    RentalFinishView,
+    RentalListView,
+    StatisticsProxyView,
+)
 
 
 def health_check(request):
     return JsonResponse({"status": "ok"}, status=200)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,5 +22,9 @@ urlpatterns = [
     path("api/v1/rental", RentalListView.as_view()),
     path("api/v1/rental/<uuid:rentalUid>", RentalDetailView.as_view()),
     path("api/v1/rental/<uuid:rentalUid>/finish", RentalFinishView.as_view()),
+    # Reverse-proxy to statistics-service. Any path under
+    # /api/v1/statistics/ is forwarded verbatim (the subpath is whatever
+    # comes after /api/v1/statistics/).
+    re_path(r"^api/v1/statistics/(?P<subpath>.*)$", StatisticsProxyView.as_view()),
     path('manage/health', health_check, name='health-check'),
 ]

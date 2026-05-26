@@ -16,6 +16,8 @@ jobs:
       DB_CARS: "cars"
       DB_RENTALS: "rentals"
       DB_PAYMENTS: "payments"
+      DB_IDENTITY: "identity"
+      DB_STATISTICS: "statistics"
       DB_USER: "program"
       DB_PASSWORD: "test"
       DB_DOCKER_HOST: "postgres"
@@ -28,6 +30,15 @@ jobs:
       CAR_SERVICE_URL: "http://car-service:8000/api/v1"
       RENTAL_SERVICE_URL: "http://rental-service:8000/api/v1"
       PAYMENT_SERVICE_URL: "http://payment-service:8000/api/v1"
+      STATISTICS_SERVICE_URL: "http://statistics-service:8000/api/v1"
+      # IdP (used by all services for JWT validation)
+      IDP_ISSUER: "http://localhost:8090"
+      IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
+      IDP_AUDIENCE: "spa"
+      JWT_PRIVATE_KEY_PATH: "services/identity-provider/keys/private.pem"
+      # Kafka (statistics-service consumer; gateway producer)
+      KAFKA_BOOTSTRAP: "kafka:9092"
+      KAFKA_TOPIC: "rental-events"
 
     steps:
       - name: Checkout
@@ -66,6 +77,22 @@ jobs:
         run: python services/gateway-service/manage.py check
       - name: Run tests
         run: python services/gateway-service/manage.py test
+
+      - name: Generate IdP RSA test key
+        run: |
+          mkdir -p services/identity-provider/keys
+          openssl genrsa -out services/identity-provider/keys/private.pem 2048
+          openssl rsa -in services/identity-provider/keys/private.pem -pubout -out services/identity-provider/keys/public.pem
+
+      - name: Identity-provider system check
+        run: python services/identity-provider/manage.py check
+      - name: Run tests
+        run: python services/identity-provider/manage.py test
+
+      - name: Statistics-service system check
+        run: python services/statistics-service/manage.py check
+      - name: Run tests
+        run: python services/statistics-service/manage.py test
 
   build:
     name: Autograding

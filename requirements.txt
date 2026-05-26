@@ -14,5 +14,12 @@ requests==2.32.5
 # Phase 1: IdP-only (other services don't need it but harmless in CI).
 django-cors-headers==4.6.0
 
+# Phase 4: Kafka producer (gateway) + consumer (statistics-service).
+# `kafka-python==2.0.2` is broken on Python 3.12 (ModuleNotFoundError:
+# kafka.vendor.six.moves — its vendored six relies on the removed `imp`
+# module). kafka-python-ng is the maintained fork with the same import
+# path (`from kafka import KafkaProducer`).
+kafka-python-ng==2.2.3
+
 # Shared authlib package (editable install so CI sees source changes).
 -e services/shared/authlib

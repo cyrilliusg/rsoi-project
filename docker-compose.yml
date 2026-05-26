@@ -171,6 +171,10 @@ services:
       IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
       IDP_AUDIENCE: "spa"
       GATEWAY_CORS_ORIGINS: "http://localhost:3000"
+      KAFKA_BOOTSTRAP: "kafka:9092"
+      KAFKA_TOPIC: "rental-events"
+      KAFKA_CLIENT_ID: "gateway-service"
+      STATISTICS_SERVICE_URL: "http://statistics-service:8000/api/v1"
     ports:
       - "8080:8000"
     tmpfs: [ "/tmp", "/run" ]
@@ -200,6 +204,35 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
+    networks: [ internal ]
+
+  kafka:
+    image: bitnamilegacy/kafka:3.7
+    container_name: kafka
+    restart: unless-stopped
+    environment:
+      # KRaft single-node (broker + controller in one process).
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_NUM_PARTITIONS: "3"
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:9092 >/dev/null 2>&1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks: [ internal ]
 
   identity-provider:
@@ -266,9 +299,86 @@ services:
       IDP_ISSUER: "http://localhost:8090"
       IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
       IDP_AUDIENCE: "spa"
+      KAFKA_BOOTSTRAP: "kafka:9092"
+      KAFKA_TOPIC: "rental-events"
+      KAFKA_CLIENT_ID: "gateway-worker"
     depends_on:
       - redis
       - gateway-service
+    networks: [ internal ]
+
+  statistics-service:
+    container_name: statistics-service
+    build:
+      context: ./services/statistics-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        shared: ./services/shared
+    restart: unless-stopped
+    environment:
+      DB_STATISTICS: "statistics"
+      DB_USER: "program"
+      DB_PASSWORD: "test"
+      DB_DOCKER_HOST: "postgres"
+      DB_LOCAL_HOST: "localhost"
+      DB_PORT: "5432"
+      DJANGO_SECRET_KEY: "test"
+      MODE: "docker"
+      DJANGO_ALLOWED_HOSTS: "*"
+      ROLE: "web"
+      IDP_ISSUER: "http://localhost:8090"
+      IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
+      IDP_AUDIENCE: "spa"
+      KAFKA_BOOTSTRAP: "kafka:9092"
+      KAFKA_TOPIC: "rental-events"
+      KAFKA_CONSUMER_GROUP: "statistics-service-cg"
+    ports:
+      - "8100:8000"
+    tmpfs: [ "/tmp", "/run" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "python - <<'EOF'\nimport urllib.request, sys\ntry:\n  urllib.request.urlopen('http://statistics-service:8000/manage/health', timeout=2)\n  sys.exit(0)\nexcept Exception:\n  sys.exit(1)\nEOF" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      internal:
+        aliases:
+          - statistics-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+
+  statistics_consumer:
+    container_name: statistics-consumer
+    build:
+      context: ./services/statistics-service
+      dockerfile: Dockerfile
+      additional_contexts:
+        shared: ./services/shared
+    restart: unless-stopped
+    environment:
+      DB_STATISTICS: "statistics"
+      DB_USER: "program"
+      DB_PASSWORD: "test"
+      DB_DOCKER_HOST: "postgres"
+      DB_LOCAL_HOST: "localhost"
+      DB_PORT: "5432"
+      DJANGO_SECRET_KEY: "test"
+      MODE: "docker"
+      DJANGO_ALLOWED_HOSTS: "*"
+      ROLE: "consumer"
+      KAFKA_BOOTSTRAP: "kafka:9092"
+      KAFKA_TOPIC: "rental-events"
+      KAFKA_CONSUMER_GROUP: "statistics-service-cg"
+      KAFKA_AUTO_OFFSET_RESET: "earliest"
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+      statistics-service:
+        condition: service_started
     networks: [ internal ]
 
   frontend:

@@ -35,6 +35,17 @@ IDP_JWKS_URI = os.environ.get('IDP_JWKS_URI', f"{IDP_ISSUER.rstrip('/')}/api/v1/
 IDP_AUDIENCE = os.environ.get('IDP_AUDIENCE', 'spa')
 IDP_JWKS_TTL = int(os.environ.get('IDP_JWKS_TTL', '600'))
 
+# Kafka producer (rental-events).
+KAFKA_BOOTSTRAP = os.environ.get('KAFKA_BOOTSTRAP', 'kafka:9092')
+KAFKA_TOPIC = os.environ.get('KAFKA_TOPIC', 'rental-events')
+KAFKA_CLIENT_ID = os.environ.get('KAFKA_CLIENT_ID', 'gateway-service')
+
+# Statistics service (proxy target).
+STATISTICS_SERVICE_URL = os.environ.get(
+    'STATISTICS_SERVICE_URL',
+    'http://statistics-service:8000/api/v1',
+)
+
 # Если запускаем локально, то соответствующий хост
 if MODE == 'local':
     DEBUG = True
