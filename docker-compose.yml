@@ -279,33 +279,33 @@ services:
         condition: service_healthy
         restart: true
 
-  gateway_worker:
-    container_name: gateway_worker-service
-    build:
-      context: ./services/gateway-service
-      dockerfile: Dockerfile
-      additional_contexts:
-        shared: ./services/shared
-    restart: unless-stopped
-    environment:
-      DJANGO_SECRET_KEY: "test"
-      MODE: "docker"
-      DJANGO_ALLOWED_HOSTS: "*"
-      CAR_SERVICE_URL: "http://car-service:8000/api/v1"
-      RENTAL_SERVICE_URL: "http://rental-service:8000/api/v1"
-      PAYMENT_SERVICE_URL: "http://payment-service:8000/api/v1"
-      REDIS_URL: "redis://redis:6379/0"
-      ROLE: "worker"
-      IDP_ISSUER: "http://localhost:8090"
-      IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
-      IDP_AUDIENCE: "spa"
-      KAFKA_BOOTSTRAP: "kafka:9092"
-      KAFKA_TOPIC: "rental-events"
-      KAFKA_CLIENT_ID: "gateway-worker"
-    depends_on:
-      - redis
-      - gateway-service
-    networks: [ internal ]
+#  gateway_worker:
+#    container_name: gateway_worker-service
+#    build:
+#      context: ./services/gateway-service
+#      dockerfile: Dockerfile
+#      additional_contexts:
+#        shared: ./services/shared
+#    restart: unless-stopped
+#    environment:
+#      DJANGO_SECRET_KEY: "test"
+#      MODE: "docker"
+#      DJANGO_ALLOWED_HOSTS: "*"
+#      CAR_SERVICE_URL: "http://car-service:8000/api/v1"
+#      RENTAL_SERVICE_URL: "http://rental-service:8000/api/v1"
+#      PAYMENT_SERVICE_URL: "http://payment-service:8000/api/v1"
+#      REDIS_URL: "redis://redis:6379/0"
+#      ROLE: "worker"
+#      IDP_ISSUER: "http://localhost:8090"
+#      IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
+#      IDP_AUDIENCE: "spa"
+#      KAFKA_BOOTSTRAP: "kafka:9092"
+#      KAFKA_TOPIC: "rental-events"
+#      KAFKA_CLIENT_ID: "gateway-worker"
+#    depends_on:
+#      - redis
+#      - gateway-service
+#    networks: [ internal ]
 
   statistics-service:
     container_name: statistics-service
