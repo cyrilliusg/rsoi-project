@@ -12,10 +12,10 @@ kafka:
       protocol: PLAINTEXT
 
   # KRaft combined mode — controller and broker in one pod, simpler and
-  # plenty for this learning workload. 3 nodes for replication=3 on the
+  # plenty for this learning workload. 1 node for replication=1 on the
   # `rental-events` topic.
   controller:
-    replicaCount: 3
+    replicaCount: 1
     persistence:
       enabled: true
       size: 5Gi
@@ -27,8 +27,8 @@ kafka:
   extraConfig: |
     auto.create.topics.enable=true
     num.partitions=3
-    default.replication.factor=3
-    min.insync.replicas=2
+    default.replication.factor=1
+    min.insync.replicas=1
 
   # All listeners above are PLAINTEXT, so SASL config is unused at the
   # wire level — leave the subchart defaults (SCRAM-SHA-256) to satisfy
