@@ -9,6 +9,8 @@ replicaCount: 1
 ingress:
   enabled: true
   className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
     - host: id.example.com
       paths:
@@ -27,7 +29,7 @@ extraConfigMap:
     DJANGO_ALLOWED_HOSTS: "*"
     DB_IDENTITY: "identity"
     DB_USER: "program"
-    DB_DOCKER_HOST: "postgres"
+    DB_DOCKER_HOST: "postgres.rsoi-data"
     DB_LOCAL_HOST: "localhost"
     DB_PORT: "5432"
     IDP_ISSUER: "https://id.example.com"

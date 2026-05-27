@@ -14,7 +14,7 @@ extraConfigMap:
     DJANGO_ALLOWED_HOSTS: "*"
     DB_CARS: "cars"
     DB_USER: "program"
-    DB_DOCKER_HOST: "postgres"
+    DB_DOCKER_HOST: "postgres.rsoi-data"
     DB_LOCAL_HOST: "localhost"
     DB_PORT: "5432"
     IDP_ISSUER: "https://id.example.com"

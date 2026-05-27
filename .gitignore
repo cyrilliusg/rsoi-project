@@ -1,3 +1,6 @@
+# Local secrets (k8s bootstrap inputs — see scripts/generate-jwt-keys.sh)
+secrets/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

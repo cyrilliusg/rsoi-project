@@ -9,6 +9,8 @@ replicaCount: 2
 ingress:
   enabled: true
   className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
     - host: api.example.com
       paths:
@@ -35,7 +37,7 @@ extraConfigMap:
     IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
     IDP_AUDIENCE: "spa"
     GATEWAY_CORS_ORIGINS: "https://app.example.com"
-    KAFKA_BOOTSTRAP: "rsoi-kafka:9092"
+    KAFKA_BOOTSTRAP: "rsoi-kafka.rsoi-data:9092"
     KAFKA_TOPIC: "rental-events"
     KAFKA_CLIENT_ID: "gateway-service"
 
