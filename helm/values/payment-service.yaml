@@ -1,0 +1,29 @@
+fullnameOverride: payment-service
+
+image:
+  repository: ghcr.io/CHANGE-ME/payment-service
+  tag: latest
+
+replicaCount: 1
+
+extraConfigMap:
+  enabled: true
+  data:
+    DJANGO_SECRET_KEY: "k8s-change-me"
+    MODE: "docker"
+    DJANGO_ALLOWED_HOSTS: "*"
+    DB_PAYMENTS: "payments"
+    DB_USER: "program"
+    DB_DOCKER_HOST: "postgres"
+    DB_LOCAL_HOST: "localhost"
+    DB_PORT: "5432"
+    IDP_ISSUER: "https://id.example.com"
+    IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
+    IDP_AUDIENCE: "spa"
+
+env:
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: postgres-credentials
+        key: APP_DB_PASSWORD

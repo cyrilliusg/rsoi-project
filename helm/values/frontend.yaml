@@ -1,0 +1,52 @@
+fullnameOverride: frontend
+
+image:
+  repository: ghcr.io/CHANGE-ME/frontend
+  tag: latest
+
+replicaCount: 2
+
+containerPort: 3000
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: app.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: app-example-com-tls
+      hosts:
+        - app.example.com
+
+# The Next.js bundle was built with NEXT_PUBLIC_* baked in (see
+# frontend/Dockerfile build args). For prod you'd rebuild with the
+# production URLs. These env vars here are unused by the running
+# `node server.js` but kept for documentation.
+extraConfigMap:
+  enabled: false
+
+probes:
+  liveness:
+    enabled: true
+    path: /
+    initialDelaySeconds: 20
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    path: /
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+env: []

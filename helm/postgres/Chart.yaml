@@ -1,0 +1,9 @@
+apiVersion: v2
+name: postgres
+description: |
+  PostgreSQL 16 StatefulSet for rsoi-project — one PG instance holding
+  the five logical databases (cars, rentals, payments, identity,
+  statistics). Init scripts mirror postgres/scripts/db-v3.sql.
+type: application
+version: 0.1.0
+appVersion: "16-alpine"

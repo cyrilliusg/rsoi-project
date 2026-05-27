@@ -1,0 +1,42 @@
+fullnameOverride: gateway-service
+
+image:
+  repository: ghcr.io/CHANGE-ME/gateway-service
+  tag: latest
+
+replicaCount: 2
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-example-com-tls
+      hosts:
+        - api.example.com
+
+extraConfigMap:
+  enabled: true
+  data:
+    DJANGO_SECRET_KEY: "k8s-change-me"
+    MODE: "docker"
+    DJANGO_ALLOWED_HOSTS: "*"
+    ROLE: "web"
+    CAR_SERVICE_URL: "http://car-service:8000/api/v1"
+    RENTAL_SERVICE_URL: "http://rental-service:8000/api/v1"
+    PAYMENT_SERVICE_URL: "http://payment-service:8000/api/v1"
+    STATISTICS_SERVICE_URL: "http://statistics-service:8000/api/v1"
+    # REDIS_URL intentionally unset: Redis is not deployed in k8s.
+    IDP_ISSUER: "https://id.example.com"
+    IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
+    IDP_AUDIENCE: "spa"
+    GATEWAY_CORS_ORIGINS: "https://app.example.com"
+    KAFKA_BOOTSTRAP: "rsoi-kafka:9092"
+    KAFKA_TOPIC: "rental-events"
+    KAFKA_CLIENT_ID: "gateway-service"
+
+env: []

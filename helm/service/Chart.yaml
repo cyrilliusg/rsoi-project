@@ -1,0 +1,9 @@
+apiVersion: v2
+name: service
+description: |
+  Universal chart for stateless services in rsoi-project (Django backends
+  and Next.js frontend). One chart, one values file per workload — see
+  helm/values/*.yaml.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

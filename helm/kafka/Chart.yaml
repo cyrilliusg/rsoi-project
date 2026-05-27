@@ -1,0 +1,19 @@
+apiVersion: v2
+name: rsoi-kafka
+description: |
+  Umbrella chart that pulls in Bitnami's Kafka chart. We don't write a
+  StatefulSet ourselves — the Bitnami chart already produces a
+  production-grade KRaft deployment.
+
+  Update the dependency before first install:
+    helm dependency update helm/kafka/
+type: application
+version: 0.1.0
+appVersion: "3.7"
+
+dependencies:
+  - name: kafka
+    # Pin a minor — the chart's values schema changes between majors.
+    # 31.x and 32.x are recent Bitnami releases that include KRaft mode.
+    version: "32.x.x"
+    repository: oci://registry-1.docker.io/bitnamicharts

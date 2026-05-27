@@ -1,0 +1,47 @@
+image:
+  repository: postgres
+  tag: "16-alpine"
+  pullPolicy: IfNotPresent
+
+# Superuser (used only on the very first start to bootstrap roles/dbs).
+superuser:
+  username: postgres
+  password: postgres
+  database: postgres
+
+# Application user — owns all five logical databases.
+appUser:
+  username: program
+  password: test
+
+# Logical databases created by the init script.
+databases:
+  - cars
+  - rentals
+  - payments
+  - identity
+  - statistics
+
+service:
+  name: postgres
+  port: 5432
+
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClass: ""
+  # When storageClass is empty Kubernetes uses the default StorageClass
+  # of the cluster.
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# Pod affinity/scheduling — usually fine to leave empty for managed K8s.
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,34 @@
+{{- /*
+Init scripts mounted at /docker-entrypoint-initdb.d. Run once on the
+first start of an empty data directory (PG_DATA empty). Mirrors
+postgres/scripts/db-v3.sql but reads the app username/password from env
+so we can rotate them without rebuilding the image.
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "postgres.fullname" . }}-init
+  labels:
+    {{- include "postgres.labels" . | nindent 4 }}
+data:
+  10-create-user.sh: |
+    #!/bin/sh
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+      CREATE ROLE "$APP_DB_USER" WITH PASSWORD '$APP_DB_PASSWORD';
+      ALTER ROLE "$APP_DB_USER" WITH LOGIN;
+    EOSQL
+  20-create-databases.sh: |
+    #!/bin/sh
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-'EOSQL'
+      {{- range .Values.databases }}
+      CREATE DATABASE {{ . }};
+      GRANT ALL PRIVILEGES ON DATABASE {{ . }} TO program;
+      {{- end }}
+    EOSQL
+    {{- range .Values.databases }}
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "{{ . }}" <<-'EOSQL'
+      GRANT USAGE, CREATE ON SCHEMA public TO program;
+    EOSQL
+    {{- end }}

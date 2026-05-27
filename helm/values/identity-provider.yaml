@@ -1,0 +1,70 @@
+fullnameOverride: identity-provider
+
+image:
+  repository: ghcr.io/CHANGE-ME/identity-provider
+  tag: latest
+
+replicaCount: 1
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: id.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: id-example-com-tls
+      hosts:
+        - id.example.com
+
+extraConfigMap:
+  enabled: true
+  data:
+    DJANGO_SECRET_KEY: "k8s-change-me"
+    MODE: "docker"
+    DJANGO_ALLOWED_HOSTS: "*"
+    DB_IDENTITY: "identity"
+    DB_USER: "program"
+    DB_DOCKER_HOST: "postgres"
+    DB_LOCAL_HOST: "localhost"
+    DB_PORT: "5432"
+    IDP_ISSUER: "https://id.example.com"
+    IDP_ACCESS_TOKEN_TTL: "3600"
+    JWT_PRIVATE_KEY_PATH: "/keys/private.pem"
+    JWT_PUBLIC_KEY_PATH: "/keys/public.pem"
+    IDP_ADMIN_EMAIL: "admin@example.com"
+    IDP_CORS_ORIGINS: "https://app.example.com"
+    SPA_REDIRECT_URIS: "https://app.example.com/auth/callback"
+
+# Secrets supplied via two externally-managed Secrets:
+#   - postgres-credentials.APP_DB_PASSWORD
+#   - idp-jwt-keys (mounted as files, contains private.pem + public.pem)
+#   - idp-admin-bootstrap (IDP_ADMIN_USERNAME, IDP_ADMIN_PASSWORD)
+env:
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: postgres-credentials
+        key: APP_DB_PASSWORD
+  - name: IDP_ADMIN_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: idp-admin-bootstrap
+        key: username
+  - name: IDP_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: idp-admin-bootstrap
+        key: password
+
+volumes:
+  - name: jwt-keys
+    secret:
+      secretName: idp-jwt-keys
+
+volumeMounts:
+  - name: jwt-keys
+    mountPath: /keys
+    readOnly: true
