@@ -103,4 +103,6 @@ jobs:
           IMAGE_OWNER: ${{ github.repository_owner }}
           IMAGE_TAG: ${{ github.sha }}
           PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
-        run: ./scripts/k8s-deploy.sh
+        # Run via `bash` so the workflow doesn't depend on the +x bit
+        # being preserved across Windows → git → Linux transit.
+        run: bash scripts/k8s-deploy.sh
