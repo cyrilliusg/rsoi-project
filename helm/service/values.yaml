@@ -8,7 +8,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 image:
-  repository: ghcr.io/CHANGE-ME/CHANGE-ME
+  repository: ghcr.io/cyrilliusg/CHANGE-ME
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -65,13 +65,13 @@ ingress:
   className: nginx
   annotations: {}
   hosts:
-    - host: example.com
+    - host: aetero.ru
       paths:
         - path: /
           pathType: Prefix
   tls: []
     # - secretName: my-tls
-    #   hosts: [example.com]
+    #   hosts: [aetero.ru]
 
 probes:
   liveness:

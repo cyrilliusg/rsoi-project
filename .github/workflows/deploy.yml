@@ -33,6 +33,14 @@ jobs:
             context: services/identity-provider
           - service: frontend
             context: frontend
+            # NEXT_PUBLIC_* are baked into the JS bundle at `npm run build`
+            # time, so the prod URLs must be passed here. Update these if
+            # the domain changes.
+            build_args: |
+              NEXT_PUBLIC_IDP_ISSUER=https://id.aetero.ru
+              NEXT_PUBLIC_GATEWAY_URL=https://api.aetero.ru
+              NEXT_PUBLIC_OAUTH_CLIENT_ID=spa
+              NEXT_PUBLIC_OAUTH_REDIRECT_URI=https://app.aetero.ru/auth/callback
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +64,9 @@ jobs:
           # buildx, so passing it for every workload is safe.
           build-contexts: |
             shared=services/shared
+          # Empty string for matrix entries without build_args — the action
+          # treats empty input as "no extra build-args".
+          build-args: ${{ matrix.build_args || '' }}
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.service }}:${{ github.sha }}

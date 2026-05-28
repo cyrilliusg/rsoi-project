@@ -1,7 +1,7 @@
 fullnameOverride: gateway-service
 
 image:
-  repository: ghcr.io/CHANGE-ME/gateway-service
+  repository: ghcr.io/cyrilliusg/gateway-service
   tag: latest
 
 replicaCount: 2
@@ -12,14 +12,14 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: api.example.com
+    - host: api.aetero.ru
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: api-example-com-tls
       hosts:
-        - api.example.com
+        - api.aetero.ru
 
 extraConfigMap:
   enabled: true
@@ -33,10 +33,10 @@ extraConfigMap:
     PAYMENT_SERVICE_URL: "http://payment-service:8000/api/v1"
     STATISTICS_SERVICE_URL: "http://statistics-service:8000/api/v1"
     # REDIS_URL intentionally unset: Redis is not deployed in k8s.
-    IDP_ISSUER: "https://id.example.com"
+    IDP_ISSUER: "https://id.aetero.ru"
     IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
     IDP_AUDIENCE: "spa"
-    GATEWAY_CORS_ORIGINS: "https://app.example.com"
+    GATEWAY_CORS_ORIGINS: "https://app.aetero.ru"
     KAFKA_BOOTSTRAP: "rsoi-kafka.rsoi-data:9092"
     KAFKA_TOPIC: "rental-events"
     KAFKA_CLIENT_ID: "gateway-service"

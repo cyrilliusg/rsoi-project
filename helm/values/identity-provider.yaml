@@ -1,7 +1,7 @@
 fullnameOverride: identity-provider
 
 image:
-  repository: ghcr.io/CHANGE-ME/identity-provider
+  repository: ghcr.io/cyrilliusg/identity-provider
   tag: latest
 
 replicaCount: 1
@@ -12,14 +12,14 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: id.example.com
+    - host: id.aetero.ru
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: id-example-com-tls
       hosts:
-        - id.example.com
+        - id.aetero.ru
 
 extraConfigMap:
   enabled: true
@@ -32,13 +32,13 @@ extraConfigMap:
     DB_DOCKER_HOST: "postgres.rsoi-data"
     DB_LOCAL_HOST: "localhost"
     DB_PORT: "5432"
-    IDP_ISSUER: "https://id.example.com"
+    IDP_ISSUER: "https://id.aetero.ru"
     IDP_ACCESS_TOKEN_TTL: "3600"
     JWT_PRIVATE_KEY_PATH: "/keys/private.pem"
     JWT_PUBLIC_KEY_PATH: "/keys/public.pem"
-    IDP_ADMIN_EMAIL: "admin@example.com"
-    IDP_CORS_ORIGINS: "https://app.example.com"
-    SPA_REDIRECT_URIS: "https://app.example.com/auth/callback"
+    IDP_ADMIN_EMAIL: "admin@aetero.ru"
+    IDP_CORS_ORIGINS: "https://app.aetero.ru"
+    SPA_REDIRECT_URIS: "https://app.aetero.ru/auth/callback"
 
 # Secrets supplied via two externally-managed Secrets:
 #   - postgres-credentials.APP_DB_PASSWORD

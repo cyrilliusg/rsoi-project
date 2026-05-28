@@ -1,7 +1,7 @@
 fullnameOverride: frontend
 
 image:
-  repository: ghcr.io/CHANGE-ME/frontend
+  repository: ghcr.io/cyrilliusg/frontend
   tag: latest
 
 replicaCount: 2
@@ -19,14 +19,14 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: app.example.com
+    - host: app.aetero.ru
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: app-example-com-tls
       hosts:
-        - app.example.com
+        - app.aetero.ru
 
 # The Next.js bundle was built with NEXT_PUBLIC_* baked in (see
 # frontend/Dockerfile build args). For prod you'd rebuild with the

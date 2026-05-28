@@ -1,5 +1,8 @@
 # Local secrets (k8s bootstrap inputs — see scripts/generate-jwt-keys.sh)
 secrets/
+# Yandex Cloud SSH keys for managed-k8s nodes
+ssh-key-*/
+*.pem
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

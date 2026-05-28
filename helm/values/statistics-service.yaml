@@ -1,7 +1,7 @@
 fullnameOverride: statistics-service
 
 image:
-  repository: ghcr.io/CHANGE-ME/statistics-service
+  repository: ghcr.io/cyrilliusg/statistics-service
   tag: latest
 
 replicaCount: 1
@@ -18,7 +18,7 @@ extraConfigMap:
     DB_LOCAL_HOST: "localhost"
     DB_PORT: "5432"
     ROLE: "web"
-    IDP_ISSUER: "https://id.example.com"
+    IDP_ISSUER: "https://id.aetero.ru"
     IDP_JWKS_URI: "http://identity-provider:8000/api/v1/jwks"
     IDP_AUDIENCE: "spa"
     KAFKA_BOOTSTRAP: "rsoi-kafka.rsoi-data:9092"

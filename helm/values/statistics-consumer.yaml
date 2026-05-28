@@ -1,7 +1,7 @@
 fullnameOverride: statistics-consumer
 
 image:
-  repository: ghcr.io/CHANGE-ME/statistics-service   # same image
+  repository: ghcr.io/cyrilliusg/statistics-service   # same image
   tag: latest
 
 replicaCount: 1
