@@ -1,6 +1,20 @@
 # Values passed down to the Bitnami kafka subchart.
 # Reference: https://github.com/bitnami/charts/tree/main/bitnami/kafka
 kafka:
+  # Bitnami removed old image tags from the free `bitnami/<image>` repo
+  # in 2025 (chart still pins `4.0.0-debian-12-r10`, which 404s).
+  # `bitnamilegacy/<image>` is Bitnami's free mirror for purged tags —
+  # no security updates, fine for a learning workload.
+  # See: https://github.com/bitnami/charts/issues/35164
+  image:
+    repository: bitnamilegacy/kafka
+  # Init container `prepareConfig` uses the same image; explicit override
+  # to be safe if the default ever stops inheriting.
+  defaultInitContainers:
+    prepareConfig:
+      image:
+        repository: bitnamilegacy/kafka
+
   listeners:
     client:
       protocol: PLAINTEXT
