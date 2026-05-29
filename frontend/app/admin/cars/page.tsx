@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { cars as carsApi, type CarsPage } from "@/lib/api";
+import { CAR_TYPE_LABEL } from "@/lib/labels";
 import styles from "../admin.module.css";
 
 const PAGE_SIZE = 20;
@@ -104,7 +105,7 @@ export default function AdminCarsPage() {
                     <td>{label}</td>
                     <td>{car.registrationNumber}</td>
                     <td>
-                      <span className={styles.eventType}>{car.type}</span>
+                      <span className={styles.eventType}>{CAR_TYPE_LABEL[car.type]}</span>
                     </td>
                     <td>{car.power ? `${car.power} л.с.` : "—"}</td>
                     <td>{car.price} ₽</td>

@@ -110,3 +110,22 @@ h2 {
 .success {
   color: var(--success);
 }
+
+@media (max-width: 640px) {
+  main {
+    padding: 1rem 0.75rem 3rem;
+  }
+
+  h1 {
+    font-size: 1.3rem;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+  }
+
+  button {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.9rem;
+  }
+}

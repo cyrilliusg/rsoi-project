@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { rentals, type Rental } from "@/lib/api";
+import { PAYMENT_STATUS_LABEL } from "@/lib/labels";
 import StatusBadge from "./StatusBadge";
 import styles from "./rental.module.css";
 
@@ -37,7 +38,9 @@ export default function RentalsListPage() {
                 {r.dateFrom} → {r.dateTo}
               </span>
               {r.payment.price !== undefined && <span>{r.payment.price} ₽</span>}
-              {r.payment.status && <span>оплата: {r.payment.status}</span>}
+              {r.payment.status && (
+                <span>оплата: {PAYMENT_STATUS_LABEL[r.payment.status]}</span>
+              )}
             </div>
           </Link>
         ))}

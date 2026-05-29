@@ -50,6 +50,15 @@
   border-collapse: collapse;
 }
 
+@media (max-width: 768px) {
+  .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 .table th,
 .table td {
   text-align: left;
@@ -108,10 +117,12 @@
 .row {
   display: flex;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .row > * {
-  flex: 1;
+  flex: 1 1 140px;
+  min-width: 0;
 }
 
 .bytypeList {

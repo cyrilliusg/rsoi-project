@@ -3,7 +3,7 @@ import "./globals.css";
 import Header from "./components/Header";
 
 export const metadata: Metadata = {
-  title: "Car Rental",
+  title: "Система аренды авто",
   description: "Распределённая система аренды автомобилей",
 };
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { rentals, type Rental } from "@/lib/api";
+import { PAYMENT_STATUS_LABEL } from "@/lib/labels";
 import StatusBadge from "../StatusBadge";
 import styles from "../rental.module.css";
 
@@ -71,7 +72,9 @@ export default function RentalDetailPage() {
         <div>
           Оплата:{" "}
           <strong>
-            {rental.payment.status ?? "неизвестно"}
+            {rental.payment.status
+              ? PAYMENT_STATUS_LABEL[rental.payment.status]
+              : "неизвестно"}
             {rental.payment.price !== undefined && ` — ${rental.payment.price} ₽`}
           </strong>
         </div>

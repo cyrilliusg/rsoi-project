@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cars as carsApi, type Car, type CarType, type CarWriteRequest } from "@/lib/api";
+import { CAR_TYPE_LABEL } from "@/lib/labels";
 import styles from "../admin.module.css";
 
 const CAR_TYPES: CarType[] = ["SEDAN", "SUV", "MINIVAN", "ROADSTER"];
@@ -109,7 +110,7 @@ export default function CarForm({ initial, mode }: Props) {
           <select value={type} onChange={(e) => setType(e.target.value as CarType)}>
             {CAR_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t}
+                {CAR_TYPE_LABEL[t]}
               </option>
             ))}
           </select>

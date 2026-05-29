@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { idpUsers, type IdpUser } from "@/lib/idp";
+import { ROLE_LABEL } from "@/lib/labels";
 import styles from "../admin.module.css";
 
 export default function AdminUsersPage() {
@@ -66,7 +67,7 @@ export default function AdminUsersPage() {
         last_name: lastName,
         role,
       });
-      setCreated(`Создан пользователь ${user.username} (${user.role})`);
+      setCreated(`Создан пользователь ${user.username} (${ROLE_LABEL[user.role]})`);
       setUsername("");
       setEmail("");
       setPassword("");
@@ -102,13 +103,13 @@ export default function AdminUsersPage() {
           <label>
             Роль
             <select value={role} onChange={(e) => setRole(e.target.value as "USER" | "ADMIN")}>
-              <option value="USER">USER</option>
-              <option value="ADMIN">ADMIN</option>
+              <option value="USER">{ROLE_LABEL.USER}</option>
+              <option value="ADMIN">{ROLE_LABEL.ADMIN}</option>
             </select>
           </label>
         </div>
         <label>
-          Email
+          Эл. почта
           <input
             type="email"
             value={email}
@@ -152,9 +153,9 @@ export default function AdminUsersPage() {
             <tr>
               <th>Логин</th>
               <th>Имя</th>
-              <th>Email</th>
+              <th>Эл. почта</th>
               <th>Роль</th>
-              <th>sub</th>
+              <th>ID</th>
             </tr>
           </thead>
           <tbody>
@@ -166,7 +167,7 @@ export default function AdminUsersPage() {
                 </td>
                 <td>{u.email}</td>
                 <td>
-                  <span className={styles.eventType}>{u.role}</span>
+                  <span className={styles.eventType}>{ROLE_LABEL[u.role]}</span>
                 </td>
                 <td>
                   <code style={{ fontSize: "0.8rem" }}>{u.sub.slice(0, 8)}…</code>

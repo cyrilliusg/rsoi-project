@@ -12,13 +12,15 @@ function CallbackInner() {
   useEffect(() => {
     const oauthError = params.get("error");
     if (oauthError) {
-      setError(`OAuth error: ${oauthError} — ${params.get("error_description") ?? ""}`);
+      setError(
+        `Ошибка авторизации: ${oauthError} — ${params.get("error_description") ?? ""}`
+      );
       return;
     }
     const code = params.get("code");
     const state = params.get("state");
     if (!code || !state) {
-      setError("Не получили code/state от Identity Provider");
+      setError("Не получили данные авторизации от Identity Provider");
       return;
     }
     completeLogin(code, state)

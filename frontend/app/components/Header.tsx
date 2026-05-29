@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getCurrentUser, logout } from "@/lib/auth";
 import type { JwtClaims } from "@/lib/jwt";
+import { ROLE_LABEL } from "@/lib/labels";
 import styles from "./Header.module.css";
 
 export default function Header() {
@@ -27,16 +28,19 @@ export default function Header() {
     logout("/");
   };
 
+  const isAdmin = user?.role === "ADMIN";
+  const brandHref = isAdmin ? "/admin/cars" : "/";
+
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link href="/" className={styles.brand}>
-          Car Rental
+        <Link href={brandHref} className={styles.brand}>
+          Система аренды авто
         </Link>
         <nav className={styles.nav}>
-          <Link href="/">Авто</Link>
-          {user && <Link href="/rentals">Мои аренды</Link>}
-          {user?.role === "ADMIN" && (
+          {!isAdmin && <Link href="/">Авто</Link>}
+          {user && !isAdmin && <Link href="/rentals">Мои аренды</Link>}
+          {isAdmin && (
             <>
               <Link href="/admin/cars">Автомобили</Link>
               <Link href="/admin/statistics">Статистика</Link>
@@ -47,8 +51,10 @@ export default function Header() {
         <div className={styles.user}>
           {user ? (
             <>
-              <span className={styles.role}>{user.role}</span>
-              <span>{user.preferred_username}</span>
+              <span className={styles.role}>
+                {user.role ? ROLE_LABEL[user.role] : ""}
+              </span>
+              <span className={styles.username}>{user.preferred_username}</span>
               <button className="secondary" onClick={handleLogout}>
                 Выйти
               </button>

@@ -53,7 +53,7 @@ function NewRentalForm() {
   }
 
   if (!carUid) {
-    return <p className="error">Не указан carUid. Вернитесь в каталог и выберите авто.</p>;
+    return <p className="error">Автомобиль не выбран. Вернитесь в каталог и выберите авто.</p>;
   }
 
   return (

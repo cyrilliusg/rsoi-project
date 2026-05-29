@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Car } from "@/lib/api";
+import { CAR_TYPE_LABEL } from "@/lib/labels";
 import styles from "./CarCard.module.css";
 
 export default function CarCard({ car, canBook }: { car: Car; canBook: boolean }) {
@@ -11,7 +12,7 @@ export default function CarCard({ car, canBook }: { car: Car; canBook: boolean }
         {car.brand} {car.model}
       </div>
       <div className={styles.meta}>
-        <span>{car.type}</span>
+        <span>{CAR_TYPE_LABEL[car.type]}</span>
         <span>№ {car.registrationNumber}</span>
         {car.power && <span>{car.power} л.с.</span>}
       </div>

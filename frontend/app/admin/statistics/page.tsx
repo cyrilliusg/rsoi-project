@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { statistics, type EventsPage, type StatisticsSummary } from "@/lib/api";
+import { formatEventType } from "@/lib/labels";
 import styles from "../admin.module.css";
 
 const EVENT_TYPES = [
@@ -144,7 +145,7 @@ export default function StatisticsPage() {
             )}
             {Object.entries(summary.byEventType).map(([type, count]) => (
               <span key={type} className={styles.bytypeItem}>
-                <code>{type}</code> <strong>{fmt(count)}</strong>
+                {formatEventType(type)} <strong>{fmt(count)}</strong>
               </span>
             ))}
           </div>
@@ -164,7 +165,7 @@ export default function StatisticsPage() {
           >
             {EVENT_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t || "Все"}
+                {t ? formatEventType(t) : "Все"}
               </option>
             ))}
           </select>
@@ -183,7 +184,7 @@ export default function StatisticsPage() {
                 <th>Время</th>
                 <th>Тип</th>
                 <th>Пользователь</th>
-                <th>Correlation</th>
+                <th>ID операции</th>
               </tr>
             </thead>
             <tbody>
@@ -191,7 +192,7 @@ export default function StatisticsPage() {
                 <tr key={e.eventId}>
                   <td>{fmtTime(e.timestamp)}</td>
                   <td>
-                    <span className={styles.eventType}>{e.eventType}</span>
+                    <span className={styles.eventType}>{formatEventType(e.eventType)}</span>
                   </td>
                   <td>{e.username || e.userId.slice(0, 8)}</td>
                   <td>
