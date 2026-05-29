@@ -38,6 +38,7 @@ export default function Header() {
           {user && <Link href="/rentals">Мои аренды</Link>}
           {user?.role === "ADMIN" && (
             <>
+              <Link href="/admin/cars">Автомобили</Link>
               <Link href="/admin/statistics">Статистика</Link>
               <Link href="/admin/users">Пользователи</Link>
             </>

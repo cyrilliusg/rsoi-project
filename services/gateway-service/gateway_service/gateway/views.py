@@ -25,6 +25,25 @@ def _principal(request):
     return sub, username
 
 
+def _forward_upstream_error(exc: requests.HTTPError) -> Response:
+    """Forward upstream 4xx/5xx response verbatim (status + JSON body).
+
+    Used on admin write operations where validation errors and 403 from
+    car-service must reach the client, not be flattened to 503.
+    """
+    resp = exc.response
+    if resp is None:
+        return Response(
+            {"message": "Upstream error"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+    try:
+        body = resp.json()
+    except ValueError:
+        body = {"message": resp.text or "Upstream error"}
+    return Response(body, status=resp.status_code)
+
+
 class CarsView(APIView):
     def get(self, request):
         show_all = request.query_params.get("showAll") == "true"
@@ -46,6 +65,69 @@ class CarsView(APIView):
             )
 
         return Response(cars)
+
+    def post(self, request):
+        """Создать автомобиль (admin-only — проверка на car-service по JWT)."""
+        token = _bearer(request)
+        try:
+            car = clients.create_car(request.data, token=token)
+        except requests.HTTPError as e:
+            return _forward_upstream_error(e)
+        except requests.RequestException:
+            return Response(
+                {"message": "Car Service is unavailable"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response(car, status=status.HTTP_201_CREATED)
+
+
+class CarDetailView(APIView):
+    """GET/PUT/PATCH/DELETE /api/v1/cars/{carUid}"""
+
+    def get(self, request, carUid):
+        token = _bearer(request)
+        try:
+            car = clients.get_car(str(carUid), token=token)
+        except requests.HTTPError as e:
+            return _forward_upstream_error(e)
+        except (ServiceUnavailable, requests.RequestException):
+            return Response(
+                {"message": "Car Service is unavailable"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response(car)
+
+    def put(self, request, carUid):
+        return self._update(request, carUid, partial=False)
+
+    def patch(self, request, carUid):
+        return self._update(request, carUid, partial=True)
+
+    def _update(self, request, carUid, *, partial: bool):
+        token = _bearer(request)
+        try:
+            car = clients.update_car(str(carUid), request.data, partial=partial, token=token)
+        except requests.HTTPError as e:
+            return _forward_upstream_error(e)
+        except requests.RequestException:
+            return Response(
+                {"message": "Car Service is unavailable"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response(car)
+
+    def delete(self, request, carUid):
+        token = _bearer(request)
+        try:
+            clients.delete_car(str(carUid), token=token)
+        except requests.HTTPError as e:
+            return _forward_upstream_error(e)
+        except requests.RequestException:
+            return Response(
+                {"message": "Car Service is unavailable"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class RentalListView(APIView):

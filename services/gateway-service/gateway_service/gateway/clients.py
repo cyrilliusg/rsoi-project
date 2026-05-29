@@ -49,6 +49,12 @@ class ServiceClient:
     def post(self, path: str, **kwargs) -> requests.Response:
         return self._request("POST", path, **kwargs)
 
+    def put(self, path: str, **kwargs) -> requests.Response:
+        return self._request("PUT", path, **kwargs)
+
+    def patch(self, path: str, **kwargs) -> requests.Response:
+        return self._request("PATCH", path, **kwargs)
+
     def delete(self, path: str, **kwargs) -> requests.Response:
         return self._request("DELETE", path, **kwargs)
 
@@ -109,6 +115,22 @@ def reserve_car(car_uid: str, *, token: Optional[str] = None) -> None:
 
 def release_car(car_uid: str, *, token: Optional[str] = None) -> None:
     car_client.post(f"/cars/{car_uid}/release/", headers=_bearer(token))
+
+
+def create_car(payload: dict[str, Any], *, token: Optional[str] = None):
+    r = car_client.post("/cars/", json=payload, headers=_bearer(token))
+    return r.json()
+
+
+def update_car(car_uid: str, payload: dict[str, Any], *, partial: bool = False,
+               token: Optional[str] = None):
+    method = car_client.patch if partial else car_client.put
+    r = method(f"/cars/{car_uid}/", json=payload, headers=_bearer(token))
+    return r.json()
+
+
+def delete_car(car_uid: str, *, token: Optional[str] = None) -> None:
+    car_client.delete(f"/cars/{car_uid}/", headers=_bearer(token))
 
 
 # ==== PAYMENT SERVICE ====

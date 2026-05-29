@@ -2,6 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from authlib.permissions import IsAuthenticated, IsAdmin
+
 from .models import Car
 from .serializers import CarResponseSerializer
 from .pagination import ApiPagination
@@ -21,6 +23,9 @@ class CarViewSet(viewsets.ModelViewSet):
     GET /api/v1/cars?showAll=true&page=...&size=...
       - по умолчанию только доступные (available=true)
       - c showAll=true вернёт и в резерве (available=false)
+
+    Чтение и reserve/release требуют только аутентификации (используется
+    из rental-flow). Создание / обновление / удаление — только для админа.
     """
     serializer_class = CarResponseSerializer
     pagination_class = ApiPagination
@@ -28,6 +33,11 @@ class CarViewSet(viewsets.ModelViewSet):
 
     #  UUID в путь-параметрах
     lookup_field = "car_uid"
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [IsAdmin()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         qs = super().get_queryset()

@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.urls import path, re_path
 
 from .gateway.views import (
+    CarDetailView,
     CarsView,
     RentalDetailView,
     RentalFinishView,
@@ -19,6 +20,7 @@ def health_check(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/v1/cars", CarsView.as_view()),
+    path("api/v1/cars/<uuid:carUid>", CarDetailView.as_view()),
     path("api/v1/rental", RentalListView.as_view()),
     path("api/v1/rental/<uuid:rentalUid>", RentalDetailView.as_view()),
     path("api/v1/rental/<uuid:rentalUid>/finish", RentalFinishView.as_view()),

@@ -63,6 +63,18 @@ export const api = {
       method: "POST",
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
+  put: <T>(path: string, body?: unknown, init?: ApiInit) =>
+    request<T>(path, {
+      ...init,
+      method: "PUT",
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }),
+  patch: <T>(path: string, body?: unknown, init?: ApiInit) =>
+    request<T>(path, {
+      ...init,
+      method: "PATCH",
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }),
   delete: <T = void>(path: string, init?: ApiInit) =>
     request<T>(path, { ...init, method: "DELETE" }),
 };
@@ -134,12 +146,29 @@ export interface CreateRentalResponse {
 // Endpoint helpers
 // ---------------------------------------------------------------------------
 
+export interface CarWriteRequest {
+  brand: string;
+  model: string;
+  registrationNumber: string;
+  power?: number | null;
+  type: CarType;
+  price: number;
+  available?: boolean;
+}
+
 export const cars = {
   list: (page = 1, size = 10, showAll = false) =>
     api.get<CarsPage>(
       `/api/v1/cars?page=${page}&size=${size}&showAll=${showAll ? "true" : "false"}`,
       { auth: true }
     ),
+  get: (uid: string) => api.get<Car>(`/api/v1/cars/${uid}`),
+  create: (req: CarWriteRequest) => api.post<Car>("/api/v1/cars", req),
+  update: (uid: string, req: CarWriteRequest) =>
+    api.put<Car>(`/api/v1/cars/${uid}`, req),
+  patch: (uid: string, req: Partial<CarWriteRequest>) =>
+    api.patch<Car>(`/api/v1/cars/${uid}`, req),
+  remove: (uid: string) => api.delete(`/api/v1/cars/${uid}`),
 };
 
 export const rentals = {
